@@ -1,14 +1,36 @@
-import torch
-from torch import nn
 import argparse
+import torch
+from torchvision import transforms
+
+from agent import Agents
+
 
 def main(config):
+    h = config.env_height
+    w = config.env_width
+    decay_rate = 0.9
 
-    return None
+    # initialize frame and agents
+    frame = torch.zeros((h, w))
+    agents = Agents(config.num_agents)
 
+    # for blurring trails
+    blur = transforms.Compose([transforms.GaussianBlur()])
 
+    # initial update to frame
+    frame = frame.index_put_(agents.get_pos(), torch.ones_like(frame))
 
+    for i in range(config.max_frames):
+        # update agent population
+        agents.update(frame)
 
+        # update frame
+        frame = frame * decay_rate
+        frame = blur(torch.unsqueeze(torch.unsqueeze(frame, 0), 0))
+        frame = torch.squeeze(frame)
+
+        frame = frame.index_put_(agents.get_pos(), torch.ones_like(frame))
+        
 
 
 if __name__ == '__main__':
@@ -24,9 +46,9 @@ if __name__ == '__main__':
     parser.add_argument('--env-width', dest='env_width',
                         default=128, type=int,
                         help='Height of the environment in pixels.')
-    parser.add_argument('--max-epochs', dest='max_epochs',
+    parser.add_argument('--max-frames', dest='max_frames',
                         default=1000, type=int,
-                        help='Max number of epochs.')
+                        help='Max number of frames.')
 
     config = parser.parse_args()
 
