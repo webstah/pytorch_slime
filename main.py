@@ -1,3 +1,6 @@
+import numpy as np
+import cv2
+
 import argparse
 import torch
 from torchvision import transforms
@@ -11,14 +14,16 @@ def main(config):
     decay_rate = 0.9
 
     # initialize frame and agents
-    frame = torch.zeros((h, w))
-    agents = Agents(config.num_agents)
+    frame = torch.zeros((w, h))
+    print(frame.shape)
+    agents = Agents(width=w, height=h, num_agents=config.num_agents, 
+                    move_speed=5)
 
     # for blurring trails
-    blur = transforms.Compose([transforms.GaussianBlur()])
+    blur = transforms.Compose([transforms.GaussianBlur(3)])
 
     # initial update to frame
-    frame = frame.index_put_(agents.get_pos(), torch.ones_like(frame))
+    frame = frame.index_put_(indices=agents.get_pos(), values=torch.ones(config.num_agents))
 
     for i in range(config.max_frames):
         # update agent population
@@ -28,23 +33,29 @@ def main(config):
         frame = frame * decay_rate
         frame = blur(torch.unsqueeze(torch.unsqueeze(frame, 0), 0))
         frame = torch.squeeze(frame)
+        frame = frame.index_put_(indices=agents.get_pos(), values=torch.ones(config.num_agents))
 
-        frame = frame.index_put_(agents.get_pos(), torch.ones_like(frame))
+        cv2.imshow("frame", frame.transpose(1, 0).cpu().detach().numpy())
+        key = cv2.waitKey(1) & 0xFF
+
+        #kill loop on key press
+        if key == ord("q"):
+            break
         
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='pytorch_slime')
     parser.add_argument('--num-agents', dest='num_agents',
-                        default=1000, type=int,
+                        default=2000, type=int,
                         help='Number of agents in environment.')
     parser.add_argument('--env-height', dest='env_height',
-                        default=720, type=int,
+                        default=360, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--env-width', dest='env_width',
-                        default=128, type=int,
+                        default=480, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--max-frames', dest='max_frames',
-                        default=1000, type=int,
+                        default=10000, type=int,
                         help='Max number of frames.')
 
     config = parser.parse_args()
