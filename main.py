@@ -32,12 +32,9 @@ def main(config):
         frame = frame.index_put_(agents.get_pos(), torch.ones_like(frame))
         
 
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='graph_ae')
-    parser.add_argument('--gpus', default=1, type=int,
-                        help='Number of GPUs to use.')
-    parser.add_argument('--num-agents', dest='num_workers',
+    parser = argparse.ArgumentParser(description='pytorch_slime')
+    parser.add_argument('--num-agents', dest='num_agents',
                         default=1000, type=int,
                         help='Number of agents in environment.')
     parser.add_argument('--env-height', dest='env_height',
