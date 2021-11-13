@@ -35,9 +35,16 @@ class AgentUpdate(nn.Module):
         sensor_y_c = self.clip(sensor_y_c, zeros, ones*(self.height-1))
 
         # get detections from sensors
-        detections_l = frame[sensor_x_l.type(torch.LongTensor), sensor_y_l.type(torch.LongTensor)]
-        detections_r = frame[sensor_x_r.type(torch.LongTensor), sensor_y_r.type(torch.LongTensor)]
-        detections_c = frame[sensor_x_c.type(torch.LongTensor), sensor_y_c.type(torch.LongTensor)]
+        det_l = frame[sensor_x_l.type(torch.LongTensor), sensor_y_l.type(torch.LongTensor)]
+        det_r = frame[sensor_x_r.type(torch.LongTensor), sensor_y_r.type(torch.LongTensor)]
+        det_c = frame[sensor_x_c.type(torch.LongTensor), sensor_y_c.type(torch.LongTensor)]
+
+        l_x = det_l * torch.cos(theta-self.sensor_offset)
+        r_x = det_r * torch.cos(theta+self.sensor_offset)
+        l_y = det_l * torch.sin(theta-self.sensor_offset)
+        r_y = det_r * torch.sin(theta+self.sensor_offset)
+        c_x = torch.cos(theta)
+        c_y = torch.sin(theta)
 
 
         # randomy change the angle of each agent with probability p_t
@@ -46,8 +53,8 @@ class AgentUpdate(nn.Module):
         theta = torch.where(prob <= self.p_t, theta_rand, theta)
 
         # calculate new positions
-        x = x + torch.cos(theta) * self.move_speed
-        y = y + torch.sin(theta) * self.move_speed
+        x = x + c_x * self.move_speed
+        y = y + c_y * self.move_speed
         
         #### correct coordinates that are outside of the frame ####
         # twos tensors of size x and y filled with ones and zeros are needed

@@ -49,10 +49,10 @@ if __name__ == '__main__':
                         default=2000, type=int,
                         help='Number of agents in environment.')
     parser.add_argument('--env-height', dest='env_height',
-                        default=360, type=int,
+                        default=720, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--env-width', dest='env_width',
-                        default=480, type=int,
+                        default=1280, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--max-frames', dest='max_frames',
                         default=10000, type=int,
