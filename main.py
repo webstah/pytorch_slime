@@ -11,16 +11,16 @@ from agent import Agents
 def main(config):
     h = config.env_height
     w = config.env_width
-    decay_rate = 0.9
+    decay_rate = 0.95
 
     # initialize frame and agents
     frame = torch.zeros((w, h))
     print(frame.shape)
     agents = Agents(width=w, height=h, num_agents=config.num_agents, 
-                    move_speed=5)
+                    move_speed=0.5)
 
     # for blurring trails
-    blur = transforms.Compose([transforms.GaussianBlur(3)])
+    blur = transforms.Compose([transforms.GaussianBlur(5)])
 
     # initial update to frame
     frame = frame.index_put_(indices=agents.get_pos(), values=torch.ones(config.num_agents))
@@ -46,13 +46,13 @@ def main(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='pytorch_slime')
     parser.add_argument('--num-agents', dest='num_agents',
-                        default=2000, type=int,
+                        default=1000, type=int,
                         help='Number of agents in environment.')
     parser.add_argument('--env-height', dest='env_height',
-                        default=720, type=int,
+                        default=320, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--env-width', dest='env_width',
-                        default=1280, type=int,
+                        default=640, type=int,
                         help='Height of the environment in pixels.')
     parser.add_argument('--max-frames', dest='max_frames',
                         default=10000, type=int,

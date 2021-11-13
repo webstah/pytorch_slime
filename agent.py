@@ -1,9 +1,11 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
+from torch.distributions import one_hot_categorical
 
 
 class AgentUpdate(nn.Module):
-    def __init__(self, width, height, move_speed, sensor_offset=0.2, p_t=0.01):
+    def __init__(self, width, height, move_speed, sensor_offset=0.6, p_t=0.005):
         super(AgentUpdate, self,).__init__()
         self.sensor_offset = sensor_offset
         self.p_t = p_t
@@ -39,22 +41,30 @@ class AgentUpdate(nn.Module):
         det_r = frame[sensor_x_r.type(torch.LongTensor), sensor_y_r.type(torch.LongTensor)]
         det_c = frame[sensor_x_c.type(torch.LongTensor), sensor_y_c.type(torch.LongTensor)]
 
-        l_x = det_l * torch.cos(theta-self.sensor_offset)
-        r_x = det_r * torch.cos(theta+self.sensor_offset)
-        l_y = det_l * torch.sin(theta-self.sensor_offset)
-        r_y = det_r * torch.sin(theta+self.sensor_offset)
+        l_x = torch.cos(theta-self.sensor_offset)
+        l_y = torch.sin(theta-self.sensor_offset)
+        r_x = torch.cos(theta+self.sensor_offset)
+        r_y = torch.sin(theta+self.sensor_offset)
         c_x = torch.cos(theta)
         c_y = torch.sin(theta)
 
+        # ! we need to scale our logits between 0 and 1 along dim 1
+        logits = F.softmax(torch.stack([det_l, det_r, det_c], dim=0).transpose(1,0), dim=1)
+        choices_x = torch.stack([l_x, r_x, c_x] ,dim=0).transpose(1,0)
+        choices_y = torch.stack([l_y, r_y, c_y], dim=0).transpose(1,0)
+        sample = one_hot_categorical.OneHotCategorical(logits=logits, validate_args=False).sample()
+
+        sampled_x = torch.sum(sample * choices_x, dim=1)
+        sampled_y = torch.sum(sample * choices_y, dim=1)
 
         # randomy change the angle of each agent with probability p_t
-        theta_rand = torch.rand_like(x.type(torch.FloatTensor)) * 2 * 3.141592
-        prob = torch.rand_like(x.type(torch.FloatTensor))
-        theta = torch.where(prob <= self.p_t, theta_rand, theta)
+        # theta_rand = torch.rand_like(x.type(torch.FloatTensor)) * 2 * 3.141592
+        # prob = torch.rand_like(x.type(torch.FloatTensor))
+        # theta = torch.where(prob <= self.p_t, theta_rand, theta)
 
         # calculate new positions
-        x = x + c_x * self.move_speed
-        y = y + c_y * self.move_speed
+        x = x + sampled_x * self.move_speed
+        y = y + sampled_y * self.move_speed
         
         #### correct coordinates that are outside of the frame ####
         # twos tensors of size x and y filled with ones and zeros are needed
@@ -84,9 +94,15 @@ class AgentUpdate(nn.Module):
 class Agents:
     def __init__(self, width, height, num_agents=64, move_speed=1):
         self.move_speed = move_speed
-        self.x = torch.randint(low=0, high=width, size=(num_agents,))
-        self.y = torch.randint(low=0, high=height, size=(num_agents,))
+        self.x = torch.randint(low=width//2-50, high=width//2+50, size=(num_agents,))
+        self.y = torch.randint(low=height//2-50, high=height//2+50, size=(num_agents,))
         self.theta = torch.rand(size=(num_agents,)) * 2 * 3.141592
+        # cen_x = width//2
+        # cen_y = height//2
+        # top = cen_y - self.y
+        # bot = cen_x - self.x
+        # self.theta = torch.atan(top/bot)
+        # print(self.theta)
         self.get_update = AgentUpdate(width, height, move_speed)
 
     def update(self, frame):
