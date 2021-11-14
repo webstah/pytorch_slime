@@ -5,13 +5,14 @@ from torch.distributions import one_hot_categorical
 
 
 class AgentUpdate(nn.Module):
-    def __init__(self, width, height, move_speed, sensor_offset=0.6, p_t=0.005):
+    def __init__(self, width, height, move_speed, sensor_offset=0.3, p_t=0.005):
         super(AgentUpdate, self,).__init__()
         self.sensor_offset = sensor_offset
         self.p_t = p_t
         self.width = width
         self.height = height
         self.move_speed = move_speed
+        self.sensor_length = 1
 
     def clip(self, x, min, max):
         return torch.max(min, torch.min(x, max))
@@ -47,13 +48,22 @@ class AgentUpdate(nn.Module):
         r_y = torch.sin(theta+self.sensor_offset)
         c_x = torch.cos(theta)
         c_y = torch.sin(theta)
-
-        # ! we need to scale our logits between 0 and 1 along dim 1
-        logits = F.softmax(torch.stack([det_l, det_r, det_c], dim=0).transpose(1,0), dim=1)
+        
+        detections = torch.stack([det_l, det_r, det_c], dim=0).transpose(1,0)
+        # logits = F.softmax(detections, dim=1)
         choices_x = torch.stack([l_x, r_x, c_x] ,dim=0).transpose(1,0)
         choices_y = torch.stack([l_y, r_y, c_y], dim=0).transpose(1,0)
-        sample = one_hot_categorical.OneHotCategorical(logits=logits, validate_args=False).sample()
+        # sample = one_hot_categorical.OneHotCategorical(logits=logits, validate_args=False).sample()
 
+        # sampled_x = torch.sum(sample * choices_x, dim=1)
+        # sampled_y = torch.sum(sample * choices_y, dim=1)
+
+        p_val = torch.rand_like(x.type(torch.FloatTensor))
+        random_choice = torch.randint_like(x, low=0, high=3).type(torch.LongTensor)
+        print(p_val.type(), (self.p_t*ones).type(), random_choice.type(), torch.argmax(detections, dim=1).type())
+        sampled_det = torch.where(p_val < self.p_t*ones, random_choice, torch.argmax(detections, dim=1))
+        sample = F.one_hot(sampled_det, num_classes=3)
+        print(sample)
         sampled_x = torch.sum(sample * choices_x, dim=1)
         sampled_y = torch.sum(sample * choices_y, dim=1)
 

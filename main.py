@@ -20,7 +20,7 @@ def main(config):
                     move_speed=0.5)
 
     # for blurring trails
-    blur = transforms.Compose([transforms.GaussianBlur(5)])
+    blur = transforms.Compose([transforms.GaussianBlur(3)])
 
     # initial update to frame
     frame = frame.index_put_(indices=agents.get_pos(), values=torch.ones(config.num_agents))
