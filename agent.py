@@ -5,14 +5,14 @@ from torch.distributions import one_hot_categorical
 
 
 class AgentUpdate(nn.Module):
-    def __init__(self, width, height, move_speed, sensor_offset=0.6 * 2 * 3.141592, p_t=0.005):
+    def __init__(self, width, height, move_speed, sensor_offset=0.3 * 2 * 3.141592, p_t=0.005):
         super(AgentUpdate, self,).__init__()
         self.sensor_offset = sensor_offset
         self.p_t = p_t
         self.width = width
         self.height = height
         self.move_speed = move_speed
-        self.sensor_length = 25
+        self.sensor_length = move_speed*50
 
     def clip(self, x, min, max):
         return torch.max(min, torch.min(x, max))
@@ -90,14 +90,19 @@ class AgentUpdate(nn.Module):
 class Agents:
     def __init__(self, width, height, num_agents=64, move_speed=1):
         self.move_speed = move_speed
-        self.x = torch.randint(low=width//2-int(width*0.15), high=width//2+int(width*0.15), size=(num_agents,))
-        self.y = torch.randint(low=height//2-int(height*0.15), high=height//2+int(height*0.15), size=(num_agents,))
+        # self.x = torch.randint(low=width//2-int(width*0.15), high=width//2+int(width*0.15), size=(num_agents,))
+        # self.y = torch.randint(low=height//2-int(height*0.15), high=height//2+int(height*0.15), size=(num_agents,))
+
+        self.x = torch.randint(low=0, high=width-1, size=(num_agents,))
+        self.y = torch.randint(low=0, high=height-1, size=(num_agents,))
+
+        # get initial angles for each agent
         self.theta = torch.rand(size=(num_agents,)) * 2 * 3.141592
         # cen_x = width//2
         # cen_y = height//2
-        # top = cen_y - self.y
-        # bot = cen_x - self.x
-        # self.theta = torch.atan(top/bot)
+        # top = self.y - cen_y
+        # bot = self.x - cen_x
+        # self.theta = torch.atan(torch.clamp(bot/top, min=1e-6))
         print(self.theta)
         self.get_update = AgentUpdate(width, height, move_speed)
 
