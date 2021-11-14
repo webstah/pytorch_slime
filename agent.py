@@ -5,14 +5,14 @@ from torch.distributions import one_hot_categorical
 
 
 class AgentUpdate(nn.Module):
-    def __init__(self, width, height, move_speed, sensor_offset=0.3, p_t=0.005):
+    def __init__(self, width, height, move_speed, sensor_offset=0.3 * 2 * 3.141592, p_t=0.005):
         super(AgentUpdate, self,).__init__()
         self.sensor_offset = sensor_offset
         self.p_t = p_t
         self.width = width
         self.height = height
         self.move_speed = move_speed
-        self.sensor_length = 1
+        self.sensor_length = 5
 
     def clip(self, x, min, max):
         return torch.max(min, torch.min(x, max))
@@ -22,12 +22,12 @@ class AgentUpdate(nn.Module):
         ones = torch.ones_like(x)
         #### get next positions ####
         # get sensor positions
-        sensor_x_l = x + torch.cos(theta-self.sensor_offset) * self.move_speed
-        sensor_y_l = y + torch.sin(theta-self.sensor_offset) * self.move_speed
-        sensor_x_r = x + torch.cos(theta+self.sensor_offset) * self.move_speed
-        sensor_y_r = y + torch.sin(theta+self.sensor_offset) * self.move_speed
-        sensor_x_c = x + torch.cos(theta) * self.move_speed
-        sensor_y_c = y + torch.sin(theta) * self.move_speed
+        sensor_x_l = x + torch.cos(theta-self.sensor_offset) * self.sensor_length
+        sensor_y_l = y + torch.sin(theta-self.sensor_offset) * self.sensor_length
+        sensor_x_r = x + torch.cos(theta+self.sensor_offset) * self.sensor_length
+        sensor_y_r = y + torch.sin(theta+self.sensor_offset) * self.sensor_length
+        sensor_x_c = x + torch.cos(theta) * self.sensor_length
+        sensor_y_c = y + torch.sin(theta) * self.sensor_length
 
         # correct results that are out of bounds
         sensor_x_l = self.clip(sensor_x_l, zeros, ones*(self.width-1))
@@ -50,27 +50,13 @@ class AgentUpdate(nn.Module):
         c_y = torch.sin(theta)
         
         detections = torch.stack([det_l, det_r, det_c], dim=0).transpose(1,0)
-        # logits = F.softmax(detections, dim=1)
+        probs = F.softmax(detections, dim=1)
         choices_x = torch.stack([l_x, r_x, c_x] ,dim=0).transpose(1,0)
         choices_y = torch.stack([l_y, r_y, c_y], dim=0).transpose(1,0)
-        # sample = one_hot_categorical.OneHotCategorical(logits=logits, validate_args=False).sample()
+        sample = one_hot_categorical.OneHotCategorical(probs=probs, validate_args=False).sample()
 
-        # sampled_x = torch.sum(sample * choices_x, dim=1)
-        # sampled_y = torch.sum(sample * choices_y, dim=1)
-
-        p_val = torch.rand_like(x.type(torch.FloatTensor))
-        random_choice = torch.randint_like(x, low=0, high=3).type(torch.LongTensor)
-        print(p_val.type(), (self.p_t*ones).type(), random_choice.type(), torch.argmax(detections, dim=1).type())
-        sampled_det = torch.where(p_val < self.p_t*ones, random_choice, torch.argmax(detections, dim=1))
-        sample = F.one_hot(sampled_det, num_classes=3)
-        print(sample)
         sampled_x = torch.sum(sample * choices_x, dim=1)
         sampled_y = torch.sum(sample * choices_y, dim=1)
-
-        # randomy change the angle of each agent with probability p_t
-        # theta_rand = torch.rand_like(x.type(torch.FloatTensor)) * 2 * 3.141592
-        # prob = torch.rand_like(x.type(torch.FloatTensor))
-        # theta = torch.where(prob <= self.p_t, theta_rand, theta)
 
         # calculate new positions
         x = x + sampled_x * self.move_speed
