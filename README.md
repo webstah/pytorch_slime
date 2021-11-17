@@ -5,6 +5,6 @@ This repository is my own playground for learning and experimenting with new ide
 
 Lots of cleaning to the code and improvements are required. Feel free to make any suggestions.
 
-![](./assets/example.gif)
+![](./assets/example_0.gif)
 
 

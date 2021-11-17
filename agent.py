@@ -3,16 +3,15 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import one_hot_categorical
 
-
 class AgentUpdate(nn.Module):
-    def __init__(self, width, height, move_speed, sensor_offset=0.3 * 2 * 3.141592, p_t=0.005):
+    def __init__(self, width, height, move_speed, sensor_offset=0.3 * 2 * 3.141592, p_t=0.01):
         super(AgentUpdate, self,).__init__()
         self.sensor_offset = sensor_offset
         self.p_t = p_t
         self.width = width
         self.height = height
         self.move_speed = move_speed
-        self.sensor_length = move_speed*50
+        self.sensor_length = move_speed*20
 
     def clip(self, x, min, max):
         return torch.max(min, torch.min(x, max))
@@ -65,7 +64,6 @@ class AgentUpdate(nn.Module):
         #### correct coordinates that are outside of the frame ####
         # twos tensors of size x and y filled with ones and zeros are needed
         
-        theta_rand = torch.rand_like(x) * 2 * 3.141592
         # check x and y coordinates
         x_clip = torch.where(x >= self.width, 
                             torch.max(zeros, torch.min(x, ones*(self.width-1))), x)
@@ -82,7 +80,8 @@ class AgentUpdate(nn.Module):
         theta_clip = theta_clip + torch.where(y >= self.height, ones, zeros)
         theta_clip = theta_clip + torch.where(y <= 0, ones, zeros)
 
-        # recombine new and old 
+        # combine random and calculated angles
+        theta_rand = torch.rand_like(x) * 2 * 3.141592
         theta_clip = theta_clip*theta_rand + (torch.abs(theta_clip - 1))*theta
 
         return x_clip, y_clip, theta_clip
@@ -98,11 +97,12 @@ class Agents:
 
         # get initial angles for each agent
         self.theta = torch.rand(size=(num_agents,)) * 2 * 3.141592
-        # cen_x = width//2
-        # cen_y = height//2
-        # top = self.y - cen_y
-        # bot = self.x - cen_x
-        # self.theta = torch.atan(torch.clamp(bot/top, min=1e-6))
+        cen_x = width//2
+        cen_y = height//2
+        top = cen_y - self.y
+        bot = cen_x - self.x
+        # bot = (abs(bot)+1e-6)*torch.sign(bot)
+        self.theta = torch.atan2(top, bot)# - 1
         print(self.theta)
         self.get_update = AgentUpdate(width, height, move_speed)
 

@@ -12,7 +12,6 @@ def main(config):
     h = config.env_height
     w = config.env_width
     decay_rate = 0.8
-
     # initialize frame and agents
     frame = torch.zeros((w, h))
     print(frame.shape)
@@ -42,7 +41,7 @@ def main(config):
         img = frame.transpose(1, 0).cpu().detach().numpy()
         resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA)
         cv2.imshow("frame", resized)
-        if i % 100 == 0:
+        if i % 50 == 0:
             cv2.imwrite('./data/'+f'{i:06}'+'.jpg', resized*255)
         key = cv2.waitKey(1) & 0xFF
 
@@ -67,8 +66,5 @@ if __name__ == '__main__':
                         help='Max number of frames.')
 
     config = parser.parse_args()
-
-    assert config.num_agents < (config.env_height * config.env_width), \
-        'More agents than there are number of pixels. Reduce number of agents.'
 
     main(config)
